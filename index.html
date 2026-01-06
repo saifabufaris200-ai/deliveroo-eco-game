@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Deliveroo Eco Challenge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eaf5ef;
+      text-align: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      max-width: 420px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      margin-bottom: 20px;
+    }
+    button {
+      width: 90%;
+      padding: 15px;
+      margin: 10px 0;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .eco { background: #00c853; color: white; }
+    .standard { background: #ff5252; color: white; }
+    .reset { background: #607d8b; color: white; }
+    .hidden { display: none; }
+    ol { text-align: left; }
+
+    img {
+      max-width: 150px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card" id="game">
+  <h1>🌱 Deliveroo Eco Challenge</h1>
+
+  <input id="playerName" placeholder="Enter your name" style="padding:10px;width:80%;" />
+
+  <p><strong>Time Left:</strong> <span id="time">120</span>s</p>
+  <p><em>Each delivery takes time — choose wisely!</em></p>
+
+  <button class="eco" onclick="ecoDelivery()">🌱 Eco Delivery</button>
+  <button class="standard" onclick="standardDelivery()">⚡ Standard Delivery</button>
+
+  <div id="animation"></div>
+
+  <hr>
+
+  <p>Green Points: <span id="points">0</span></p>
+  <p>CO₂ Impact: <span id="co2">0</span> g</p>
+
+  <p id="message"></p>
+</div>
+
+<div class="card hidden" id="endScreen">
+  <h2>📊 Results</h2>
+  <p><strong><span id="finalName"></span></strong></p>
+  <p>Green Points: <span id="finalPoints"></span></p>
+  <p>CO₂ Impact: <span id="finalCO2"></span> g</p>
+  <p>Eco Rating: <span id="rating"></span></p>
+  <p id="bonus"></p>
+
+  <button class="reset" onclick="restart()">🔁 Next Player</button>
+</div>
+
+<div class="card">
+  <h2>🏆 Eco Leaderboard (Today)</h2>
+  <ol id="leaderboard"></ol>
+</div>
+
+<script>
+  let points = 0;
+  let co2 = 0;
+  let timeLeft = 120;
+  let timerStarted = false;
+  let canDeliver = true;
+
+  function startTimer() {
+    if (timerStarted) return;
+    timerStarted = true;
+
+    const timer = setInterval(() => {
+      timeLeft--;
+      document.getElementById("time").innerText = timeLeft;
+
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        endGame();
+      }
+    }, 1000);
+  }
+
+  function showAnimation(type) {
+    const anim = document.getElementById("animation");
+
+    if (type === "eco") {
+      anim.innerHTML =
+        `<img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif" alt="Happy Earth">`;
+    } else {
+      anim.innerHTML =
+        `<img src="https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif" alt="Pollution">`;
+    }
+
+    setTimeout(() => {
+      anim.innerHTML = "";
+    }, 2000);
+  }
+
+  function ecoDelivery() {
+    if (!canDeliver) return;
+
+    startTimer();
+    canDeliver = false;
+
+    points += 10;
+    co2 -= 120;
+    timeLeft -= 3;
+
+    update("🌱 Eco delivery in progress… CO₂ saved!");
+    showAnimation("eco");
+
+    setTimeout(() => {
+      canDeliver = true;
+    }, 3000);
+  }
+
+  function standardDelivery() {
+    if (!canDeliver) return;
+
+    startTimer();
+    canDeliver = false;
+
+    points -= 5;
+    co2 += 150;
+    timeLeft -= 1;
+
+    update("⚡ Standard delivery completed quickly.");
+    showAnimation("standard");
+
+    setTimeout(() => {
+      canDeliver = true;
+    }, 1500);
+  }
+
+  function update(msg) {
+    document.getElementById("points").innerText = points;
+    document.getElementById("co2").innerText = co2;
+    document.getElementById("message").innerText = msg;
+  }
+
+  function endGame() {
+    document.getElementById("game").classList.add("hidden");
+    document.getElementById("endScreen").classList.remove("hidden");
+
+    const name = document.getElementById("playerName").value || "Anonymous";
+
+    document.getElementById("finalName").innerText = name;
+    document.getElementById("finalPoints").innerText = points;
+    document.getElementById("finalCO2").innerText = co2;
+
+    let rating = "Poor";
+    if (points >= 50) rating = "Excellent 🌟";
+    else if (points >= 20) rating = "Average 👍";
+
+    document.getElementById("rating").innerText = rating;
+
+    if (points >= 40) {
+      document.getElementById("bonus").innerText =
+        "🎁 Bonus unlocked: Driver earns e-bike & e-scooter discounts!";
+    }
+
+    saveScore(name, points);
+    loadLeaderboard();
+  }
+
+  function saveScore(name, score) {
+    let scores = JSON.parse(localStorage.getItem("ecoScores")) || [];
+    scores.push({ name, score });
+    scores.sort((a, b) => b.score - a.score);
+    scores = scores.slice(0, 10);
+    localStorage.setItem("ecoScores", JSON.stringify(scores));
+  }
+
+  function loadLeaderboard() {
+    const list = document.getElementById("leaderboard");
+    list.innerHTML = "";
+
+    const scores = JSON.parse(localStorage.getItem("ecoScores")) || [];
+    scores.forEach(s => {
+      const li = document.createElement("li");
+      li.innerText = `${s.name} – ${s.score} pts`;
+      list.appendChild(li);
+    });
+  }
+
+  function restart() {
+    location.reload();
+  }
+
+  loadLeaderboard();
+</script>
+
+</body>
+</html>
