@@ -39,6 +39,47 @@
       max-width: 150px;
       margin-top: 10px;
     }
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Deliveroo Eco Challenge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eaf5ef;
+      text-align: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      max-width: 420px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      margin-bottom: 20px;
+    }
+    button {
+      width: 90%;
+      padding: 15px;
+      margin: 10px 0;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .eco { background: #00c853; color: white; }
+    .standard { background: #ff5252; color: white; }
+    .reset { background: #607d8b; color: white; }
+    .hidden { display: none; }
+    ol { text-align: left; font-size: 14px; }
+
+    img {
+      max-width: 150px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 
@@ -84,6 +125,15 @@
 </div>
 
 <script>
+  /* 🔁 DAILY LEADERBOARD RESET */
+  const today = new Date().toDateString();
+  const savedDay = localStorage.getItem("ecoDay");
+
+  if (savedDay !== today) {
+    localStorage.setItem("ecoDay", today);
+    localStorage.removeItem("ecoScores");
+  }
+
   let points = 0;
   let co2 = 0;
   let deliveries = 0;
@@ -223,3 +273,4 @@
 
 </body>
 </html>
+
