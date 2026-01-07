@@ -36,49 +36,13 @@
     ol { text-align: left; font-size: 14px; }
 
     img {
-      max-width: 150px;
+      max-width: 140px;
       margin-top: 10px;
     }
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Deliveroo Eco Challenge</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #eaf5ef;
-      text-align: center;
-      padding: 20px;
-    }
-    .card {
-      background: white;
-      max-width: 420px;
-      margin: auto;
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-      margin-bottom: 20px;
-    }
-    button {
-      width: 90%;
-      padding: 15px;
+    .earth {
+      font-size: 40px;
       margin: 10px 0;
-      font-size: 18px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-    }
-    .eco { background: #00c853; color: white; }
-    .standard { background: #ff5252; color: white; }
-    .reset { background: #607d8b; color: white; }
-    .hidden { display: none; }
-    ol { text-align: left; font-size: 14px; }
-
-    img {
-      max-width: 150px;
-      margin-top: 10px;
     }
   </style>
 </head>
@@ -90,187 +54,197 @@
 
   <input id="playerName" placeholder="Enter your name" style="padding:10px;width:80%;" />
 
+  <p><strong>Driver Type:</strong> <span id="driver"></span></p>
+
   <p><strong>Time Left:</strong> <span id="time">50</span>s</p>
-  <p><em>Each delivery takes time — choose wisely!</em></p>
+
+  <div class="earth" id="earth">😃</div>
 
   <button class="eco" onclick="ecoDelivery()">🌱 Eco Delivery</button>
   <button class="standard" onclick="standardDelivery()">⚡ Standard Delivery</button>
 
   <div id="animation"></div>
 
+  <p id="event"></p>
+
   <hr>
 
   <p>Green Points: <span id="points">0</span></p>
   <p>CO₂ Impact: <span id="co2">0</span> g</p>
   <p>Deliveries Made: <span id="deliveries">0</span></p>
-
-  <p id="message"></p>
+  <p>Eco Combo: <span id="combo">0</span></p>
 </div>
 
 <div class="card hidden" id="endScreen">
   <h2>📊 Results</h2>
   <p><strong><span id="finalName"></span></strong></p>
-  <p>Green Points: <span id="finalPoints"></span></p>
+  <p>Points: <span id="finalPoints"></span></p>
   <p>CO₂ Impact: <span id="finalCO2"></span> g</p>
-  <p>Deliveries Made: <span id="finalDeliveries"></span></p>
-  <p>Eco Rating: <span id="rating"></span></p>
-  <p id="bonus"></p>
+  <p>Deliveries: <span id="finalDeliveries"></span></p>
+  <p><strong>Badge:</strong> <span id="badge"></span></p>
 
   <button class="reset" onclick="restart()">🔁 Next Player</button>
 </div>
 
 <div class="card">
-  <h2>🏆 Eco Leaderboard (Today)</h2>
+  <h2>🏆 Leaderboard (Today)</h2>
   <ol id="leaderboard"></ol>
 </div>
 
 <script>
-  /* 🔁 DAILY LEADERBOARD RESET */
-  const today = new Date().toDateString();
-  const savedDay = localStorage.getItem("ecoDay");
+/* 🔁 DAILY RESET */
+const today = new Date().toDateString();
+if (localStorage.getItem("ecoDay") !== today) {
+  localStorage.setItem("ecoDay", today);
+  localStorage.removeItem("ecoScores");
+}
 
-  if (savedDay !== today) {
-    localStorage.setItem("ecoDay", today);
-    localStorage.removeItem("ecoScores");
-  }
+/* GAME STATE */
+let points = 0;
+let co2 = 0;
+let deliveries = 0;
+let combo = 0;
+let timeLeft = 50;
+let started = false;
+let canTap = true;
 
-  let points = 0;
-  let co2 = 0;
-  let deliveries = 0;
-  let timeLeft = 50;
-  let timerStarted = false;
-  let canDeliver = true;
+/* DRIVER TYPES */
+const drivers = [
+  { name: "Eco Champion 🚲", ecoBonus: 5 },
+  { name: "Speedster ⚡", standardBonus: 1 },
+  { name: "Balanced Driver ⚖️", ecoBonus: 0 }
+];
+const driver = drivers[Math.floor(Math.random()*drivers.length)];
+document.getElementById("driver").innerText = driver.name;
 
-  function startTimer() {
-    if (timerStarted) return;
-    timerStarted = true;
-
-    const timer = setInterval(() => {
-      timeLeft--;
-      document.getElementById("time").innerText = timeLeft;
-
-      if (timeLeft <= 0) {
-        clearInterval(timer);
-        endGame();
-      }
-    }, 1000);
-  }
-
-  function showAnimation(type) {
-    const anim = document.getElementById("animation");
-
-    if (type === "eco") {
-      anim.innerHTML =
-        `<img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif" alt="Happy Earth">`;
-    } else {
-      anim.innerHTML =
-        `<img src="https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif" alt="Pollution">`;
+/* TIMER */
+function startTimer() {
+  if (started) return;
+  started = true;
+  const t = setInterval(() => {
+    timeLeft--;
+    document.getElementById("time").innerText = timeLeft;
+    if (timeLeft <= 0) {
+      clearInterval(t);
+      endGame();
     }
+  }, 1000);
+}
 
-    setTimeout(() => {
-      anim.innerHTML = "";
-    }, 2000);
+/* RANDOM EVENTS */
+function randomEvent() {
+  const events = [
+    "🚗 Traffic jam! Standard delivery causes extra CO₂.",
+    "🚲 New bike lane! Eco delivery bonus!",
+    "🌧️ Heavy rain slows eco deliveries."
+  ];
+  if (Math.random() < 0.3) {
+    const e = events[Math.floor(Math.random()*events.length)];
+    document.getElementById("event").innerText = e;
+    if (e.includes("Traffic")) co2 += 50;
+    if (e.includes("bike")) points += 5;
+    if (e.includes("rain")) timeLeft -= 2;
+  } else {
+    document.getElementById("event").innerText = "";
   }
+}
 
-  function ecoDelivery() {
-    if (!canDeliver) return;
+/* EARTH MOOD */
+function updateEarth() {
+  const earth = document.getElementById("earth");
+  if (co2 < 0) earth.innerText = "😄";
+  else if (co2 < 300) earth.innerText = "😐";
+  else earth.innerText = "😡";
+}
 
-    startTimer();
-    canDeliver = false;
+/* ANIMATION */
+function showAnim(type) {
+  document.getElementById("animation").innerHTML =
+    type === "eco"
+    ? `<img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif">`
+    : `<img src="https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif">`;
+  setTimeout(()=>{ document.getElementById("animation").innerHTML=""; },1500);
+}
 
-    points += 10;
-    co2 -= 120;
-    deliveries++;
-    timeLeft -= 3;
+/* ACTIONS */
+function ecoDelivery() {
+  if (!canTap) return;
+  startTimer(); canTap=false;
+  combo++; deliveries++;
+  points += 10 + combo + (driver.ecoBonus||0);
+  co2 -= 120;
+  timeLeft -= 3;
+  showAnim("eco");
+  randomEvent();
+  update();
+  setTimeout(()=>canTap=true,1200);
+}
 
-    update("🌱 Eco delivery in progress… CO₂ saved!");
-    showAnimation("eco");
+function standardDelivery() {
+  if (!canTap) return;
+  startTimer(); canTap=false;
+  combo = 0; deliveries++;
+  points -= 5;
+  co2 += 150;
+  timeLeft -= 1;
+  showAnim("standard");
+  randomEvent();
+  update();
+  setTimeout(()=>canTap=true,800);
+}
 
-    setTimeout(() => {
-      canDeliver = true;
-    }, 3000);
-  }
+/* UPDATE UI */
+function update() {
+  document.getElementById("points").innerText = points;
+  document.getElementById("co2").innerText = co2;
+  document.getElementById("deliveries").innerText = deliveries;
+  document.getElementById("combo").innerText = combo;
+  updateEarth();
+}
 
-  function standardDelivery() {
-    if (!canDeliver) return;
+/* END GAME */
+function endGame() {
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("endScreen").classList.remove("hidden");
 
-    startTimer();
-    canDeliver = false;
+  const name = document.getElementById("playerName").value || "Anonymous";
+  document.getElementById("finalName").innerText = name;
+  document.getElementById("finalPoints").innerText = points;
+  document.getElementById("finalCO2").innerText = co2;
+  document.getElementById("finalDeliveries").innerText = deliveries;
 
-    points -= 5;
-    co2 += 150;
-    deliveries++;
-    timeLeft -= 1;
+  let badge = "Carbon Heavyweight ⚠️";
+  if (points > 40) badge = "Planet Protector 🌍";
+  else if (points > 20) badge = "Eco Driver 🌱";
 
-    update("⚡ Standard delivery completed quickly.");
-    showAnimation("standard");
+  document.getElementById("badge").innerText = badge;
 
-    setTimeout(() => {
-      canDeliver = true;
-    }, 1500);
-  }
-
-  function update(msg) {
-    document.getElementById("points").innerText = points;
-    document.getElementById("co2").innerText = co2;
-    document.getElementById("deliveries").innerText = deliveries;
-    document.getElementById("message").innerText = msg;
-  }
-
-  function endGame() {
-    document.getElementById("game").classList.add("hidden");
-    document.getElementById("endScreen").classList.remove("hidden");
-
-    const name = document.getElementById("playerName").value || "Anonymous";
-
-    document.getElementById("finalName").innerText = name;
-    document.getElementById("finalPoints").innerText = points;
-    document.getElementById("finalCO2").innerText = co2;
-    document.getElementById("finalDeliveries").innerText = deliveries;
-
-    let rating = "Poor";
-    if (points >= 40) rating = "Excellent 🌟";
-    else if (points >= 20) rating = "Average 👍";
-
-    document.getElementById("rating").innerText = rating;
-
-    if (points >= 30) {
-      document.getElementById("bonus").innerText =
-        "🎁 Bonus unlocked: Driver earns e-bike & e-scooter discounts!";
-    }
-
-    saveScore(name, points, co2, deliveries);
-    loadLeaderboard();
-  }
-
-  function saveScore(name, score, co2Impact, deliveriesMade) {
-    let scores = JSON.parse(localStorage.getItem("ecoScores")) || [];
-    scores.push({ name, score, co2Impact, deliveriesMade });
-    scores.sort((a, b) => b.score - a.score);
-    scores = scores.slice(0, 10);
-    localStorage.setItem("ecoScores", JSON.stringify(scores));
-  }
-
-  function loadLeaderboard() {
-    const list = document.getElementById("leaderboard");
-    list.innerHTML = "";
-
-    const scores = JSON.parse(localStorage.getItem("ecoScores")) || [];
-    scores.forEach(s => {
-      const li = document.createElement("li");
-      li.innerText =
-        `${s.name} – ${s.score} pts | CO₂: ${s.co2Impact}g | Deliveries: ${s.deliveriesMade}`;
-      list.appendChild(li);
-    });
-  }
-
-  function restart() {
-    location.reload();
-  }
-
+  saveScore(name);
   loadLeaderboard();
+}
+
+function saveScore(name) {
+  let scores = JSON.parse(localStorage.getItem("ecoScores")) || [];
+  scores.push({name, points, co2, deliveries});
+  scores.sort((a,b)=>b.points-a.points);
+  scores = scores.slice(0,10);
+  localStorage.setItem("ecoScores", JSON.stringify(scores));
+}
+
+function loadLeaderboard() {
+  const list = document.getElementById("leaderboard");
+  list.innerHTML = "";
+  (JSON.parse(localStorage.getItem("ecoScores"))||[]).forEach(s=>{
+    const li = document.createElement("li");
+    li.innerText = `${s.name} – ${s.points} pts | CO₂ ${s.co2}g | 🚚 ${s.deliveries}`;
+    list.appendChild(li);
+  });
+}
+
+function restart() { location.reload(); }
+
+loadLeaderboard();
 </script>
 
 </body>
 </html>
-
